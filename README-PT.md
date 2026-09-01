@@ -12,6 +12,24 @@ O objetivo é automatizar o trabalho repetitivo envolvido na criação de atas, 
 
 ---
 
+## 📸 Demonstração
+
+### Workflow
+
+![Visão geral do workflow](screenshots/workflow-overview.png)
+
+### Análise com IA
+
+![Análise com IA](screenshots/ai-analysis.png)
+
+### Ata gerada
+
+![Ata da reunião](screenshots/meeting-minutes.png)
+
+### Envio por e-mail
+
+![Envio da ata por e-mail](screenshots/email-delivery.png)
+
 ## Problema
 
 Criar atas de reuniões manualmente após uma reunião pode consumir bastante tempo.
