@@ -12,6 +12,24 @@ The goal is to automate the repetitive work involved in creating meeting minutes
 
 ---
 
+## 📸 Demo
+
+### Workflow
+
+![Workflow overview](screenshots/workflow-overview.png)
+
+### AI Analysis
+
+![AI analysis](screenshots/ai-analysis.png)
+
+### Generated Meeting Minutes
+
+![Meeting minutes](screenshots/meeting-minutes.png)
+
+### Email Delivery
+
+![Email delivery](screenshots/email-delivery.png)
+
 ## Problem
 
 Creating meeting minutes manually after a meeting can be time-consuming.
