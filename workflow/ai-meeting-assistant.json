@@ -1,0 +1,341 @@
+{
+  "name": "AI Meeting Assistant — v2 copy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meeting-transcription",
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        144,
+        0
+      ],
+      "id": "bbf9d205-dd62-4b7f-9d2e-da412e095631",
+      "name": "Receive Meeting File",
+      "webhookId": "e0aea9c4-61e7-4990-aaba-bbd59929addd"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        368,
+        0
+      ],
+      "id": "e7c93b86-edf8-4c9d-b7d6-fdce3534a47d",
+      "name": "Extract Transcript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analise a transcrição da reunião e extraia as informações importantes.\n\nRetorne:\n- participantes\n- resumo\n- decisoes\n- tarefas\n- pendencias\n\nDEFINIÇÕES:\n\nPARTICIPANTES:\nListe somente as pessoas que aparecem explicitamente como participantes ou falantes na transcrição.\nNão inclua pessoas apenas mencionadas durante a reunião.\nNão deduza participantes.\nSe não for possível identificar participantes, deixe o array vazio.\n\nDECISÃO:\nAlgo que foi decidido ou acordado durante a reunião.\nInclua somente decisões ou acordos efetivamente confirmados durante a reunião.\nUma decisão deve representar uma definição, escolha, aprovação ou acordo sobre o projeto.\nNão registre como decisão uma tarefa individual que já esteja registrada em \"tarefas\".\nPor exemplo, se a reunião disser:\n\"Carlos ficará responsável por atualizar o orçamento até quarta-feira\", registre isso em \"tarefas\", e não como uma decisão.\nSe a reunião disser:\n\"A proposta será entregue ao cliente até sexta-feira\", isso pode ser registrado como uma decisão.\nUma decisão que será tomada futuramente não é uma decisão tomada.\n\nTAREFA:\nUma ação que precisa ser realizada por alguém.\nToda ação mencionada explicitamente deve aparecer em \"tarefas\", mesmo que o responsável ou prazo não estejam definidos.\n\nPENDÊNCIAS:\nInclua informações ausentes, bloqueios ou situações que permanecem incompletas.\nUma pendência descreve o que está faltando ou impedindo o avanço.\nSe existir uma ação explícita para resolver a pendência, registre essa ação separadamente em \"tarefas\".\nExemplo:\nPendência: \"O cliente ainda não enviou os dados necessários.\"\nTarefa: \"Contactar o cliente para solicitar os dados.\"\nNão use uma pendência como substituto de uma tarefa.\nNão transforme uma tarefa em pendência.\n\nREGRAS:\n\n- Não invente informações.\n- Não omita tarefas explicitamente mencionadas.\n- Não misture duas tarefas diferentes em uma única tarefa.\n- Preserve os prazos exatamente como aparecem na transcrição.\n- Se o responsável não estiver definido, use \"Não identificado\".\n- Se o prazo não estiver definido, use \"Não definido\".\n- Não transforme uma tarefa em decisão apenas porque ela foi mencionada durante uma decisão.\n- Não repita uma tarefa em \"decisoes\".\n- Separe tarefas diferentes mesmo quando estiverem relacionadas.\n- Revise a transcrição antes de responder para verificar se nenhuma tarefa foi omitida.\n\nTranscrição:\n\n{{ $json.data }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        784,
+        16
+      ],
+      "id": "1c57ab6e-7524-43a1-8424-7d4aa706d49a",
+      "name": "Analyze Meeting",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "model": "qwen3:4b",
+        "options": {
+          "think": false,
+          "temperature": 0,
+          "numCtx": 4096,
+          "numPredict": 2024,
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        560,
+        224
+      ],
+      "id": "5de91bfb-552b-4ad8-b63e-9904fc220b9c",
+      "name": "Ollama (Qwen Model)",
+      "credentials": {
+        "ollamaApi": {
+          "id": "y21FH1KLAFWzNOow",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"participantes\": [\n    \"Nome do participante\"\n  ],\n  \"resumo\": \"Resumo da reunião.\",\n  \"decisoes\": [\n    \"Decisão tomada.\"\n  ],\n  \"tarefas\": [\n    {\n      \"tarefa\": \"Ação a realizar.\",\n      \"responsavel\": \"Responsável ou Não identificado\",\n      \"prazo\": \"Prazo ou Não definido\"\n    }\n  ],\n  \"pendencias\": [\n    \"Pendência identificada.\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        704,
+        224
+      ],
+      "id": "34eb3f0c-a431-4e10-8d20-fbffc0f20cc3",
+      "name": "Structured Meeting Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.html;\n\nconst buffer = Buffer.from(html, 'utf-8');\n\nreturn [\n  {\n    json: {},\n    binary: {\n      data: await this.helpers.prepareBinaryData(\n        buffer,\n        'ata-reuniao.html',\n        'text/html'\n      )\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        32
+      ],
+      "id": "6df9abd4-a15d-4467-be5c-f3f8f44bf001",
+      "name": "Create HTML File"
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "httpVariantWarning": "",
+        "method": "POST",
+        "url": "https://v2.convertapi.com/convert/html/to/pdf",
+        "": "",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "convertApi",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/octet-stream"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "File",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": false,
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        },
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1632,
+        32
+      ],
+      "id": "7d8f9caf-ba49-45fd-86b1-e8c48baa1b0f",
+      "name": "Convert HTML to PDF",
+      "extendsCredential": "convertApi",
+      "credentials": {
+        "convertApi": {
+          "id": "mUIXt2ibEw5ZtmsA",
+          "name": "ConvertAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\n\nitem.binary.data.fileName = 'ata-reuniao.pdf';\nitem.binary.data.fileExtension = 'pdf';\nitem.binary.data.mimeType = 'application/pdf';\n\nreturn [item];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        32
+      ],
+      "id": "630af47b-2dcb-4df2-9339-09f0e8cbb28b",
+      "name": "Prepare PDF File"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst dados = $input.first().json.output;\n\nconst participantes = Array.isArray(dados.participantes)\n  ? dados.participantes\n  : [];\n\nconst escapeHtml = (text) => {\n  if (text === null || text === undefined) return '';\n  \n  return String(text)\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#039;');\n};\n\nconst decisoes = Array.isArray(dados.decisoes)\n  ? dados.decisoes\n  : [];\n\nconst tarefas = Array.isArray(dados.tarefas)\n  ? dados.tarefas\n  : [];\n\nconst pendencias = Array.isArray(dados.pendencias)\n  ? dados.pendencias\n  : [];\n\nconst decisoesHtml = decisoes.length\n  ? decisoes\n      .map(decisao => `<li>${escapeHtml(decisao)}</li>`)\n      .join('')\n  : '<li class=\"empty\">Nenhuma decisão registrada.</li>';\n\nconst tarefasHtml = tarefas.length\n  ? tarefas\n      .map(tarefa => `\n        <tr>\n          <td>${escapeHtml(tarefa.tarefa)}</td>\n          <td>${escapeHtml(tarefa.responsavel)}</td>\n          <td>${escapeHtml(tarefa.prazo)}</td>\n        </tr>\n      `)\n      .join('')\n  : `\n      <tr>\n        <td colspan=\"3\" class=\"empty\">Nenhuma tarefa registrada.</td>\n      </tr>\n    `;\n\nconst pendenciasHtml = pendencias.length\n  ? pendencias\n      .map(pendencia => `<li>${escapeHtml(pendencia)}</li>`)\n      .join('')\n  : '<li class=\"empty\">Nenhuma pendência registrada.</li>';\n\nconst participantesHtml = participantes.length\n  ? participantes.map(nome => `<li>${nome}</li>`).join('')\n  : '<li class=\"empty\">Não identificados.</li>';\n\nconst html = `\n<!DOCTYPE html>\n<html lang=\"pt\">\n<head>\n  <meta charset=\"UTF-8\">\n\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n\n  <title>Ata da Reunião</title>\n\n  <style>\n    * {\n      box-sizing: border-box;\n    }\n\n    body {\n      font-family: Arial, Helvetica, sans-serif;\n      background: #f4f6f8;\n      color: #2d3748;\n      margin: 0;\n      padding: 40px 20px;\n      line-height: 1.6;\n    }\n\n    .document {\n      max-width: 900px;\n      margin: 0 auto;\n      background: #ffffff;\n      padding: 50px 60px;\n      border-radius: 8px;\n      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);\n    }\n\n    .header {\n      text-align: center;\n      border-bottom: 2px solid #e2e8f0;\n      padding-bottom: 25px;\n      margin-bottom: 35px;\n    }\n\n    .header h1 {\n      margin: 0;\n      font-size: 28px;\n      letter-spacing: 1px;\n    }\n\n    .header .subtitle {\n      margin-top: 8px;\n      font-size: 16px;\n      color: #718096;\n    }\n\n    section {\n      margin-bottom: 35px;\n    }\n\n    h2 {\n      font-size: 18px;\n      margin-bottom: 12px;\n      padding-bottom: 8px;\n      border-bottom: 1px solid #e2e8f0;\n    }\n\n    .summary {\n      text-align: justify;\n    }\n\n    ul {\n      margin: 0;\n      padding-left: 22px;\n    }\n\n    li {\n      margin-bottom: 8px;\n    }\n\n    table {\n      width: 100%;\n      border-collapse: collapse;\n      margin-top: 15px;\n    }\n\n    th,\n    td {\n      padding: 12px;\n      border-bottom: 1px solid #e2e8f0;\n      text-align: left;\n      vertical-align: top;\n    }\n\n    th {\n      font-weight: bold;\n      background: #f7fafc;\n    }\n\n    .empty {\n      color: #718096;\n      font-style: italic;\n    }\n\n    .footer {\n      margin-top: 45px;\n      padding-top: 15px;\n      border-top: 1px solid #e2e8f0;\n      text-align: center;\n      font-size: 12px;\n      color: #a0aec0;\n    }\n\n    @media print {\n      body {\n        background: #ffffff;\n        padding: 0;\n      }\n\n      .document {\n        box-shadow: none;\n        max-width: none;\n        padding: 30px;\n      }\n    }\n\n    @media (max-width: 700px) {\n      body {\n        padding: 15px;\n      }\n\n      .document {\n        padding: 30px 20px;\n      }\n\n      table {\n        font-size: 14px;\n      }\n\n      th,\n      td {\n        padding: 8px;\n      }\n    }\n  </style>\n</head>\n\n<body>\n\n  <main class=\"document\">\n\n    <header class=\"header\">\n      <h1>ATA DE REUNIÃO</h1>\n    </header>\n\n    <section>\n      <h2>Participantes</h2>\n      <ul>\n        ${participantesHtml}\n      </ul>\n    </section>\n\n    <section>\n      <h2>Resumo</h2>\n      <p class=\"summary\">${escapeHtml(dados.resumo)}</p>\n    </section>\n\n    <section>\n      <h2>Decisões tomadas</h2>\n      <ul>\n        ${decisoesHtml}\n      </ul>\n    </section>\n\n    <section>\n      <h2>Plano de ação</h2>\n\n      <table>\n        <thead>\n          <tr>\n            <th>Tarefa</th>\n            <th>Responsável</th>\n            <th>Prazo</th>\n          </tr>\n        </thead>\n\n        <tbody>\n          ${tarefasHtml}\n        </tbody>\n      </table>\n    </section>\n\n    <section>\n      <h2>Pendências</h2>\n      <ul>\n        ${pendenciasHtml}\n      </ul>\n    </section>\n\n    <footer class=\"footer\">\n      Ata gerada automaticamente por AI Meeting Assistant\n    </footer>\n\n  </main>\n\n</body>\n</html>\n`;\n\nreturn [\n  {\n    json: {\n      html\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        32
+      ],
+      "id": "f15b8607-8b24-475a-93dc-d7256d73be57",
+      "name": "Generate Meeting Minutes - HTML"
+    },
+    {
+      "parameters": {
+        "sendTo": "your-email@example.com",
+        "subject": "Ata da Reunião",
+        "emailType": "text",
+        "message": "Olá,  Segue em anexo a ata da reunião. \n\n\nCumprimentos, \nAI Meeting Assistant",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2064,
+        48
+      ],
+      "id": "78da75bf-0a97-4843-847e-696d61e223e2",
+      "name": "Send Meeting Minutes by Email",
+      "webhookId": "92aa5871-6c82-4601-801d-ffc67b6f207b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "zaoyUPr4liEFFpSm",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive Meeting File": {
+      "main": [
+        [
+          {
+            "node": "Extract Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Transcript": {
+      "main": [
+        [
+          {
+            "node": "Analyze Meeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Meeting": {
+      "main": [
+        [
+          {
+            "node": "Generate Meeting Minutes - HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama (Qwen Model)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze Meeting",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Meeting Output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Analyze Meeting",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create HTML File": {
+      "main": [
+        [
+          {
+            "node": "Convert HTML to PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert HTML to PDF": {
+      "main": [
+        [
+          {
+            "node": "Prepare PDF File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare PDF File": {
+      "main": [
+        [
+          {
+            "node": "Send Meeting Minutes by Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Meeting Minutes - HTML": {
+      "main": [
+        [
+          {
+            "node": "Create HTML File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ece047b0-92b8-4bb2-b2cb-69805ccbc3e9",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "dTyo43WogtO53OsT",
+  "tags": []
+}
